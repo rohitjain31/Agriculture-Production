@@ -5,6 +5,7 @@ const col = ' 3-2013';
 var arr = [];
 var idx = null;
 var keyLine = null;
+var keyLineIndex = 13;
 var sumArr = [];
 
 // States are in same order as given in csv file. If we change the order then code will break.
@@ -56,6 +57,8 @@ lineReader.on('line',function(line){
     //stacked chart of rice production
     if(productionName.indexOf('Rice Yield') !== -1){
       var tempState = 0;
+      var tempObj = {};
+      var keyLineIndex = 13;
       stateIdx = stateIdx || 0;
       data.forEach(function(elem, index){
         if(index > 13){
@@ -63,30 +66,60 @@ lineReader.on('line',function(line){
               elem = 0;
 
             if(productionName.indexOf(state[stateIdx]) !== -1){
-              tempState += parseInt(elem);
+              if(!tempObj.hasOwnProperty('Particulars')){
+                tempObj['Particulars'] = state[stateIdx];
+              }
+              if(!tempObj.hasOwnProperty('total')){
+                tempObj['total'] = 0;
+              }
+              var key = keyLine[keyLineIndex];
+              tempObj[key] = parseInt(elem);
+              tempObj['total'] += parseInt(elem);
+              keyLineIndex += 1;
             }
         }
-      })
+      });
       if(productionName.indexOf(state[stateIdx]) !== -1){
-        jsonRiceProduction.push({
-          'state' : state[stateIdx],
-          'production' : tempState
-        })
+        jsonRiceProduction.push(tempObj);
         stateIdx += 1;
       }
     }
 })
 
 lineReader.on('close', function(){
+    //Sorting
+    jsonOilseedData.sort(function(a,b){
+      if(a['3-2013'] == b['3-2013']){
+        return 0;
+      }else {
+        return parseInt(a['3-2013']) > parseInt(b['3-2013']) ? -1 : 1;
+      }
+    });
+
+    jsonFoodgrainsData.sort(function(a,b){
+      if(a['3-2013'] == b['3-2013']){
+        return 0;
+      }else {
+        return parseInt(a['3-2013']) > parseInt(b['3-2013']) ? -1 : 1;
+      }
+    });
 
     /// all commercial crops and plot the aggregated value vs. year
     sumArr.forEach(function(elem, index){
-      var keyLineIndex = 13;
+      var year = keyLine[keyLineIndex].slice(3,7);
       jsonCommercialCropData.push({
-        'Year' : keyLine[keyLineIndex],
+        'Year' : year,
         'aggregateVal' :  elem/5
       });
       keyLineIndex += 1;
+    })
+
+    jsonCommercialCropData.sort(function(a,b){
+      if(a.aggregateVal == b.aggregateVal){
+        return 0;
+      }else {
+        return a.aggregateVal > b.aggregateVal ? 1 : -1;
+      }
     })
 
     //Creating JSON file for each
